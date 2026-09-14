@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenêtre — suivi de jeûne intermittent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14161b;
+    --surface:#1d2027;
+    --surface-2:#262a33;
+    --border:#343947;
+    --text:#edeae2;
+    --text-muted:#8c9099;
+    --fast:#e4a94a;
+    --fast-dim:#4a3e26;
+    --eat:#5fa793;
+    --eat-dim:#243733;
+    --danger:#d9695f;
+    --ok:#5fa793;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:90px;
+  }
+  h1,h2,h3{font-family:'Fraunces',serif;font-weight:500;margin:0;}
+  .wrap{max-width:520px;margin:0 auto;padding:20px 18px 8px;}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;}
+  header.top h1{font-size:1.5rem;letter-spacing:0.01em;}
+  header.top .tagline{color:var(--text-muted);font-size:0.8rem;margin-top:2px;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:16px;
+  }
+
+  /* --- Hero timer --- */
+  .hero{text-align:center;padding:26px 18px 22px;}
+  .ring{
+    width:210px;height:210px;border-radius:50%;
+    margin:0 auto 18px;
+    display:flex;align-items:center;justify-content:center;
+    transition:background 0.6s ease;
+  }
+  .ring-inner{
+    width:172px;height:172px;border-radius:50%;
+    background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:4px;
+  }
+  .phase-label{font-size:0.72rem;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;}
+  .phase-time{font-family:'Fraunces',serif;font-variant-numeric:tabular-nums;font-size:2.15rem;font-weight:500;line-height:1;margin-top:4px;}
+  .phase-sub{font-size:0.78rem;color:var(--text-muted);margin-top:6px;}
+  .hero-note{font-size:0.85rem;color:var(--text-muted);margin-top:4px;}
+
+  .protocol-row{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+  .protocol-btn{
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    padding:8px 14px;border-radius:20px;font-size:0.82rem;font-family:'Inter',sans-serif;
+    cursor:pointer;
+  }
+  .protocol-btn.active{background:var(--fast);border-color:var(--fast);color:#1b1408;font-weight:600;}
+
+  .time-inputs{display:flex;gap:10px;justify-content:center;margin-top:14px;align-items:center;font-size:0.85rem;color:var(--text-muted);}
+  .time-inputs input{
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:6px 8px;font-family:'Inter',sans-serif;font-size:0.85rem;width:88px;
+  }
+
+  /* --- Tabs --- */
+  nav.tabs{
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--surface);border-top:1px solid var(--border);
+    display:flex;justify-content:space-around;padding:10px 6px calc(10px + env(safe-area-inset-bottom));
+    max-width:520px;margin:0 auto;
+  }
+  nav.tabs button{
+    background:none;border:none;color:var(--text-muted);font-family:'Inter',sans-serif;
+    font-size:0.72rem;display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:4px 8px;cursor:pointer;
+  }
+  nav.tabs button.active{color:var(--fast);}
+  nav.tabs .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0;}
+  nav.tabs button.active .dot{opacity:1;}
+
+  .section{display:none;}
+  .section.active{display:block;}
+
+  /* --- Daily check-in --- */
+  .checkin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .checkin-item{background:var(--surface-2);border-radius:10px;padding:12px;}
+  .checkin-item label{display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;}
+  .toggle-pair{display:flex;gap:6px;}
+  .toggle-pair button{
+    flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:7px 0;border-radius:8px;font-size:0.85rem;cursor:pointer;
+  }
+  .toggle-pair button.sel-yes.selected{background:var(--eat);border-color:var(--eat);color:#0d211d;font-weight:600;}
+  .toggle-pair button.sel-no.selected{background:var(--danger);border-color:var(--danger);color:#2a0f0c;font-weight:600;}
+  .scale{display:flex;gap:5px;}
+  .scale button{
+    flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);
+    padding:7px 0;border-radius:8px;font-size:0.85rem;cursor:pointer;
+  }
+  .scale button.selected{background:var(--fast);border-color:var(--fast);color:#1b1408;font-weight:600;}
+
+  /* --- Week table --- */
+  table.week{width:100%;border-collapse:collapse;font-size:0.78rem;}
+  table.week th{color:var(--text-muted);font-weight:500;padding:6px 3px;font-size:0.7rem;}
+  table.week td{text-align:center;padding:6px 3px;}
+  table.week td.rowlabel{text-align:left;color:var(--text-muted);font-size:0.72rem;padding-right:6px;}
+  table.week .cell{
+    width:30px;height:30px;border-radius:8px;background:var(--surface-2);
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+    border:1px solid var(--border);
+  }
+  table.week .cell.yes{background:var(--eat);color:#0d211d;font-weight:700;}
+  table.week .cell.no{background:var(--danger);color:#2a0f0c;font-weight:700;}
+  table.week .cell.today{border-color:var(--fast);}
+
+  /* --- Measurements --- */
+  .m-form{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+  .m-form .row{display:flex;gap:10px;}
+  .m-form input, .m-form textarea{
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:9px 10px;font-family:'Inter',sans-serif;font-size:0.88rem;flex:1;width:100%;
+  }
+  .m-form textarea{resize:vertical;min-height:44px;}
+  .btn-primary{
+    background:var(--fast);border:none;color:#1b1408;font-weight:600;
+    padding:11px;border-radius:10px;font-size:0.9rem;cursor:pointer;width:100%;font-family:'Inter',sans-serif;
+  }
+  .m-history{display:flex;flex-direction:column;gap:8px;}
+  .m-entry{
+    background:var(--surface-2);border-radius:10px;padding:10px 12px;
+    display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;
+  }
+  .m-entry .date{color:var(--text-muted);font-size:0.75rem;}
+  .m-entry .vals{text-align:right;}
+  .m-entry .delta{font-size:0.72rem;color:var(--text-muted);}
+  .m-entry .delta.down{color:var(--ok);}
+  .m-entry .delta.up{color:var(--danger);}
+
+  /* --- Guide tab --- */
+  .guide h3{font-size:1.02rem;margin-bottom:8px;color:var(--fast);}
+  .guide p{font-size:0.88rem;line-height:1.55;color:var(--text);margin:0 0 10px;}
+  .guide ul{margin:0 0 10px;padding-left:18px;font-size:0.88rem;line-height:1.6;color:var(--text);}
+  .foodgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .foodcol{background:var(--surface-2);border-radius:10px;padding:12px;}
+  .foodcol.ok{border-left:3px solid var(--eat);}
+  .foodcol.no{border-left:3px solid var(--danger);}
+  .foodcol h4{margin:0 0 8px;font-size:0.8rem;font-family:'Inter',sans-serif;font-weight:600;}
+  .foodcol ul{margin:0;padding-left:16px;font-size:0.78rem;line-height:1.5;color:var(--text-muted);}
+  .warning-box{
+    background:var(--fast-dim);border:1px solid var(--fast);border-radius:10px;
+    padding:12px 14px;font-size:0.82rem;color:var(--text);margin-top:6px;
+  }
+  .divider{height:1px;background:var(--border);margin:18px 0;}
+  .reset-link{color:var(--text-muted);font-size:0.75rem;text-decoration:underline;background:none;border:none;cursor:pointer;padding:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Fenêtre</h1>
+      <div class="tagline">Ton protocole 16/8 — pas à pas</div>
+    </div>
+  </header>
+
+  <!-- ================= AUJOURD'HUI ================= -->
+  <section class="section active" id="tab-today">
+    <div class="card hero">
+      <div class="ring" id="ring">
+        <div class="ring-inner">
+          <div class="phase-label" id="phaseLabel">—</div>
+          <div class="phase-time" id="phaseTime">--:--:--</div>
+          <div class="phase-sub" id="phaseSub">restant</div>
+        </div>
+      </div>
+      <div class="hero-note" id="heroNote"></div>
+
+      <div class="protocol-row">
+        <button class="protocol-btn" data-protocol="14/10" data-start="10:00" data-end="20:00">14/10</button>
+        <button class="protocol-btn" data-protocol="15/9" data-start="11:00" data-end="20:00">15/9</button>
+        <button class="protocol-btn" data-protocol="16/8" data-start="12:00" data-end="20:00">16/8</button>
+      </div>
+      <div class="time-inputs">
+        <span>Fenêtre :</span>
+        <input type="time" id="eatStart">
+        <span>→</span>
+        <input type="time" id="eatEnd">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:1rem;margin-bottom:12px;">Check-in du jour</h2>
+      <div class="checkin-grid">
+        <div class="checkin-item">
+          <label>Fenêtre respectée ?</label>
+          <div class="toggle-pair" data-field="windowRespected">
+            <button class="sel-yes" data-val="true">Oui</button>
+            <button class="sel-no" data-val="false">Non</button>
+          </div>
+        </div>
+        <div class="checkin-item">
+          <label>Sport fait ?</label>
+          <div class="toggle-pair" data-field="sport">
+            <button class="sel-yes" data-val="true">Oui</button>
+            <button class="sel-no" data-val="false">Non</button>
+          </div>
+        </div>
+        <div class="checkin-item">
+          <label>Énergie (1–5)</label>
+          <div class="scale" data-field="energy">
+            <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button>
+          </div>
+        </div>
+        <div class="checkin-item">
+          <label>Faim / irritabilité (1–5)</label>
+          <div class="scale" data-field="hunger">
+            <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-val="4">4</button><button data-val="5">5</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SEMAINE ================= -->
+  <section class="section" id="tab-week">
+    <div class="card">
+      <h2 style="font-size:1rem;margin-bottom:4px;">Cette semaine</h2>
+      <div class="hero-note" style="text-align:left;margin-bottom:14px;">Touche une case pour la modifier — tour de taille et ressenti comptent plus que le poids seul.</div>
+      <table class="week" id="weekTable"></table>
+    </div>
+    <div class="card">
+      <h2 style="font-size:1rem;margin-bottom:10px;">Progression sur 4 semaines</h2>
+      <ul style="font-size:0.85rem;line-height:1.7;color:var(--text-muted);padding-left:18px;margin:0;">
+        <li><b style="color:var(--text)">Semaine 1</b> — 14/10, s'habituer, observer énergie et faim</li>
+        <li><b style="color:var(--text)">Semaine 2</b> — 15/9 ou 16/8 si bien toléré</li>
+        <li><b style="color:var(--text)">Semaines 3–4</b> — 16/8 stable + musculation régulière</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= MESURES ================= -->
+  <section class="section" id="tab-measures">
+    <div class="card">
+      <h2 style="font-size:1rem;margin-bottom:12px;">Nouvelle mesure</h2>
+      <div class="m-form">
+        <input type="date" id="mDate">
+        <div class="row">
+          <input type="number" step="0.1" id="mWeight" placeholder="Poids (kg)">
+          <input type="number" step="0.5" id="mWaist" placeholder="Tour de taille (cm)">
+        </div>
+        <textarea id="mFeeling" placeholder="Ressenti (énergie, sommeil, humeur)…"></textarea>
+        <button class="btn-primary" id="mSave">Enregistrer la mesure</button>
+      </div>
+      <div class="m-history" id="mHistory"></div>
+    </div>
+  </section>
+
+  <!-- ================= GUIDE ================= -->
+  <section class="section guide" id="tab-guide">
+    <div class="card">
+      <h3>Objectif</h3>
+      <p>Réduire la graisse abdominale et améliorer la composition corporelle sans perdre de muscle, en restant à un poids santé. Avec un IMC normal, il ne s'agit pas de perdre beaucoup de kilos, mais d'affiner le ventre et de gagner en définition.</p>
+    </div>
+    <div class="card">
+      <h3>Pendant le jeûne</h3>
+      <div class="foodgrid">
+        <div class="foodcol ok">
+          <h4>✅ Autorisé</h4>
+          <ul>
+            <li>Eau plate ou gazeuse</li>
+            <li>Café noir sans sucre ni lait</li>
+            <li>Thé et tisanes non sucrés</li>
+            <li>Eau citronnée sans sucre</li>
+          </ul>
+        </div>
+        <div class="foodcol no">
+          <h4>❌ Interdit</h4>
+          <ul>
+            <li>Tout aliment solide</li>
+            <li>Lait, crème, sucre</li>
+            <li>Jus de fruits, sodas</li>
+            <li>Bouillons, chewing-gum sucré</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Priorités nutritionnelles</h3>
+      <ul>
+        <li><b>Protéines :</b> 90–120 g/jour (≈1,6–2,2 g/kg) pour préserver le muscle</li>
+        <li><b>Légumes et fibres :</b> à chaque repas, pour la satiété et le transit</li>
+        <li><b>Bonnes graisses :</b> avocat, huile d'olive, oléagineux, poissons gras</li>
+        <li><b>Glucides de qualité :</b> céréales complètes, patate douce, fruits (modérés le soir)</li>
+      </ul>
+      <h3 style="margin-top:14px;">Exemples de repas</h3>
+      <ul>
+        <li><b>Déjeuner :</b> œufs + avocat + légumes, ou poulet + quinoa + salade, ou saumon + riz complet + brocoli</li>
+        <li><b>Collation :</b> yaourt grec + fruits rouges + amandes, ou fromage blanc + noix</li>
+        <li><b>Dîner :</b> poisson ou viande maigre + légumes + féculents modérés, ou omelette aux légumes</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Activité physique</h3>
+      <p>Le jeûne seul ne sculpte pas le ventre. La musculation et un peu de cardio sont indispensables.</p>
+      <ul>
+        <li>Musculation : 2 à 4 séances/semaine (squats, développés, tractions, soulevé de terre…)</li>
+        <li>Marche : 8 000–10 000 pas/jour ou 30–45 min de marche rapide</li>
+        <li>Cardio optionnel : 1–2 séances légères si désiré</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Conseils pratiques</h3>
+      <ul>
+        <li>Hydrate-toi bien tout au long de la journée, surtout pendant le jeûne</li>
+        <li>Dors 7–8 h : le manque de sommeil favorise le stockage abdominal</li>
+        <li>Gère le stress (le cortisol favorise la graisse ventrale)</li>
+        <li>Sois patient : les résultats visibles prennent souvent 4–8 semaines</li>
+        <li>Si la faim est trop forte les premiers jours, raccourcis temporairement le jeûne</li>
+      </ul>
+      <div class="warning-box">
+        <b>Signaux d'alerte — arrête ou consulte :</b> fatigue intense persistante, vertiges, irritabilité extrême, troubles du sommeil ou obsession alimentaire, perte de poids trop rapide, sensation de faiblesse musculaire, ou tout symptôme inhabituel.
+      </div>
+    </div>
+    <div class="card">
+      <p style="color:var(--text-muted);font-size:0.8rem;margin:0;">⚠ Ce guide est un outil pratique personnalisé et ne remplace pas un avis médical. Consulte un médecin avant de commencer, surtout en cas d'antécédents médicaux ou de traitement en cours.</p>
+    </div>
+    <div class="divider"></div>
+    <div style="text-align:center;">
+      <button class="reset-link" id="resetData">Réinitialiser mes données</button>
+    </div>
+  </section>
+
+</div>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="today"><span>Aujourd'hui</span><span class="dot"></span></button>
+  <button class="tab-btn" data-tab="week"><span>Semaine</span><span class="dot"></span></button>
+  <button class="tab-btn" data-tab="measures"><span>Mesures</span><span class="dot"></span></button>
+  <button class="tab-btn" data-tab="guide"><span>Guide</span><span class="dot"></span></button>
+</nav>
+
+<script>
+(function(){
+  const DAY_LABELS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  let settings = { protocol:'16/8', eatStart:'12:00', eatEnd:'20:00' };
+  let dailyLog = {};
+  let measurements = [];
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function dateKey(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function todayKey(){ return dateKey(new Date()); }
+
+  // ---------- storage (localStorage — fonctionne dans tout navigateur) ----------
+  const STORAGE_PREFIX = 'fenetre:';
+
+  async function loadAll(){
+    try{
+      const s = localStorage.getItem(STORAGE_PREFIX+'settings');
+      if (s) settings = JSON.parse(s);
+    }catch(e){}
+    try{
+      const d = localStorage.getItem(STORAGE_PREFIX+'daily-log');
+      if (d) dailyLog = JSON.parse(d);
+    }catch(e){}
+    try{
+      const m = localStorage.getItem(STORAGE_PREFIX+'measurements-log');
+      if (m) measurements = JSON.parse(m);
+    }catch(e){}
+    renderAll();
+  }
+
+  async function saveSettings(){
+    try{ localStorage.setItem(STORAGE_PREFIX+'settings', JSON.stringify(settings)); }catch(e){}
+  }
+  async function saveDaily(){
+    try{ localStorage.setItem(STORAGE_PREFIX+'daily-log', JSON.stringify(dailyLog)); }catch(e){}
+  }
+  async function saveMeasurements(){
+    try{ localStorage.setItem(STORAGE_PREFIX+'measurements-log', JSON.stringify(measurements)); }catch(e){}
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+      if(btn.dataset.tab === 'week') renderWeek();
+      if(btn.dataset.tab === 'measures') renderMeasurements();
+    });
+  });
+
+  // ---------- protocol / timer ----------
+  document.querySelectorAll('.protocol-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      settings.protocol = btn.dataset.protocol;
+      settings.eatStart = btn.dataset.start;
+      settings.eatEnd = btn.dataset.end;
+      saveSettings();
+      renderSettings();
+      tick();
+    });
+  });
+  document.getElementById('eatStart').addEventListener('change', e=>{
+    settings.eatStart = e.target.value; settings.protocol = 'perso'; saveSettings(); renderSettings(); tick();
+  });
+  document.getElementById('eatEnd').addEventListener('change', e=>{
+    settings.eatEnd = e.target.value; settings.protocol = 'perso'; saveSettings(); renderSettings(); tick();
+  });
+
+  function renderSettings(){
+    document.querySelectorAll('.protocol-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.protocol === settings.protocol);
+    });
+    document.getElementById('eatStart').value = settings.eatStart;
+    document.getElementById('eatEnd').value = settings.eatEnd;
+  }
+
+  function phaseInfo(now){
+    const [sh,sm] = settings.eatStart.split(':').map(Number);
+    const [eh,em] = settings.eatEnd.split(':').map(Number);
+    const startToday = new Date(now); startToday.setHours(sh,sm,0,0);
+    const endToday = new Date(now); endToday.setHours(eh,em,0,0);
+
+    if (now >= startToday && now < endToday){
+      const total = endToday - startToday, elapsed = now - startToday;
+      return {phase:'eating', target:endToday, pct: elapsed/total*100};
+    } else if (now < startToday){
+      const prevEnd = new Date(startToday); prevEnd.setDate(prevEnd.getDate()-1); prevEnd.setHours(eh,em,0,0);
+      const total = startToday - prevEnd, elapsed = now - prevEnd;
+      return {phase:'fasting', target:startToday, pct: elapsed/total*100};
+    } else {
+      const nextStart = new Date(startToday); nextStart.setDate(nextStart.getDate()+1);
+      const total = nextStart - endToday, elapsed = now - endToday;
+      return {phase:'fasting', target:nextStart, pct: elapsed/total*100};
+    }
+  }
+
+  function fmtRemaining(ms){
+    const s = Math.max(0, Math.floor(ms/1000));
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    return pad(h)+':'+pad(m)+':'+pad(sec);
+  }
+
+  function tick(){
+    const now = new Date();
+    const info = phaseInfo(now);
+    const remaining = info.target - now;
+    const ring = document.getElementById('ring');
+    const color = info.phase === 'fasting' ? 'var(--fast)' : 'var(--eat)';
+    const dim = info.phase === 'fasting' ? 'var(--surface-2)' : 'var(--surface-2)';
+    ring.style.background = `conic-gradient(${color} ${info.pct}%, ${dim} 0)`;
+
+    document.getElementById('phaseLabel').textContent = info.phase === 'fasting' ? 'Jeûne en cours' : 'Fenêtre alimentaire';
+    document.getElementById('phaseLabel').style.color = info.phase === 'fasting' ? 'var(--fast)' : 'var(--eat)';
+    document.getElementById('phaseTime').textContent = fmtRemaining(remaining);
+    document.getElementById('phaseSub').textContent = info.phase === 'fasting'
+      ? `avant l'ouverture de la fenêtre (${settings.eatStart})`
+      : `avant la fermeture de la fenêtre (${settings.eatEnd})`;
+    document.getElementById('heroNote').textContent = info.phase === 'fasting'
+      ? 'Eau, café ou thé non sucré uniquement.'
+      : 'Priorité aux protéines, légumes et bonnes graisses.';
+  }
+  setInterval(tick, 1000);
+
+  // ---------- daily check-in ----------
+  function getEntry(key){
+    return dailyLog[key] || {windowRespected:null, sport:null, energy:null, hunger:null};
+  }
+  function setEntry(key, field, val){
+    if(!dailyLog[key]) dailyLog[key] = {windowRespected:null, sport:null, energy:null, hunger:null};
+    // toggle off if clicking same value again
+    if (dailyLog[key][field] === val) dailyLog[key][field] = null;
+    else dailyLog[key][field] = val;
+    saveDaily();
+  }
+
+  function renderCheckin(){
+    const entry = getEntry(todayKey());
+    document.querySelectorAll('#tab-today .toggle-pair').forEach(group=>{
+      const field = group.dataset.field;
+      group.querySelectorAll('button').forEach(btn=>{
+        const val = btn.dataset.val === 'true';
+        btn.classList.toggle('selected', entry[field] === val);
+      });
+    });
+    document.querySelectorAll('#tab-today .scale').forEach(group=>{
+      const field = group.dataset.field;
+      group.querySelectorAll('button').forEach(btn=>{
+        btn.classList.toggle('selected', entry[field] === Number(btn.dataset.val));
+      });
+    });
+  }
+
+  document.querySelectorAll('#tab-today .toggle-pair button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const group = btn.parentElement;
+      const val = btn.dataset.val === 'true';
+      setEntry(todayKey(), group.dataset.field, val);
+      renderCheckin();
+    });
+  });
+  document.querySelectorAll('#tab-today .scale button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const group = btn.parentElement;
+      setEntry(todayKey(), group.dataset.field, Number(btn.dataset.val));
+      renderCheckin();
+    });
+  });
+
+  // ---------- week table ----------
+  function currentWeekDates(){
+    const now = new Date();
+    const dow = (now.getDay()+6)%7; // 0 = Monday
+    const monday = new Date(now); monday.setDate(now.getDate()-dow); monday.setHours(0,0,0,0);
+    const dates = [];
+    for(let i=0;i<7;i++){ const d = new Date(monday); d.setDate(monday.getDate()+i); dates.push(d); }
+    return dates;
+  }
+
+  const WEEK_ROWS = [
+    {field:'windowRespected', label:'Fenêtre respectée', type:'bool'},
+    {field:'energy', label:'Énergie (1–5)', type:'scale'},
+    {field:'sport', label:'Sport fait', type:'bool'},
+    {field:'hunger', label:'Faim / irritabilité', type:'scale'}
+  ];
+
+  function renderWeek(){
+    const dates = currentWeekDates();
+    const tk = todayKey();
+    let html = '<tr><th></th>';
+    dates.forEach((d,i)=>{ html += `<th>${DAY_LABELS[i]}</th>`; });
+    html += '</tr>';
+
+    WEEK_ROWS.forEach(row=>{
+      html += `<tr><td class="rowlabel">${row.label}</td>`;
+      dates.forEach(d=>{
+        const key = dateKey(d);
+        const entry = getEntry(key);
+        const val = entry[row.field];
+        let display = '–', cls = '';
+        if (row.type === 'bool'){
+          if (val === true){ display='✓'; cls='yes'; }
+          else if (val === false){ display='✗'; cls='no'; }
+        } else {
+          if (val !== null && val !== undefined){ display = val; }
+        }
+        const todayCls = key === tk ? ' today' : '';
+        html += `<td><div class="cell ${cls}${todayCls}" data-key="${key}" data-field="${row.field}" data-type="${row.type}">${display}</div></td>`;
+      });
+      html += '</tr>';
+    });
+    document.getElementById('weekTable').innerHTML = html;
+
+    document.querySelectorAll('#weekTable .cell').forEach(cell=>{
+      cell.addEventListener('click', ()=>{
+        const key = cell.dataset.key, field = cell.dataset.field, type = cell.dataset.type;
+        const entry = getEntry(key);
+        if (type === 'bool'){
+          const cur = entry[field];
+          const next = cur === null || cur === undefined ? true : (cur === true ? false : null);
+          if(!dailyLog[key]) dailyLog[key] = {windowRespected:null, sport:null, energy:null, hunger:null};
+          dailyLog[key][field] = next;
+        } else {
+          const cur = entry[field];
+          const next = (cur === null || cur === undefined || cur >= 5) ? (cur >=5 ? null : 1) : cur+1;
+          if(!dailyLog[key]) dailyLog[key] = {windowRespected:null, sport:null, energy:null, hunger:null};
+          dailyLog[key][field] = next;
+        }
+        saveDaily();
+        renderWeek();
+        if(key === todayKey()) renderCheckin();
+      });
+    });
+  }
+
+  // ---------- measurements ----------
+  document.getElementById('mDate').value = todayKey();
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const date = document.getElementById('mDate').value || todayKey();
+    const weight = parseFloat(document.getElementById('mWeight').value);
+    const waist = parseFloat(document.getElementById('mWaist').value);
+    const feeling = document.getElementById('mFeeling').value.trim();
+    if (!weight && !waist && !feeling){ return; }
+    measurements.push({
+      date,
+      weight: isNaN(weight) ? null : weight,
+      waist: isNaN(waist) ? null : waist,
+      feeling: feeling || ''
+    });
+    measurements.sort((a,b)=> a.date < b.date ? 1 : -1);
+    await saveMeasurements();
+    document.getElementById('mWeight').value = '';
+    document.getElementById('mWaist').value = '';
+    document.getElementById('mFeeling').value = '';
+    renderMeasurements();
+  });
+
+  function renderMeasurements(){
+    const el = document.getElementById('mHistory');
+    if (!measurements.length){
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:10px 0;">Aucune mesure enregistrée pour l\\'instant.</div>';
+      return;
+    }
+    let html = '';
+    measurements.forEach((m, idx)=>{
+      const prev = measurements[idx+1]; // next in array = earlier in time (sorted desc)
+      let waistDelta = '';
+      if (prev && prev.waist != null && m.waist != null){
+        const diff = (m.waist - prev.waist).toFixed(1);
+        const cls = diff < 0 ? 'down' : (diff > 0 ? 'up' : '');
+        waistDelta = `<div class="delta ${cls}">${diff > 0 ? '+' : ''}${diff} cm</div>`;
+      }
+      html += `<div class="m-entry">
+        <div>
+          <div class="date">${m.date}</div>
+          ${m.feeling ? `<div style="font-size:0.78rem;color:var(--text-muted);max-width:180px;">${escapeHtml(m.feeling)}</div>` : ''}
+        </div>
+        <div class="vals">
+          ${m.weight != null ? `<div>${m.weight} kg</div>` : ''}
+          ${m.waist != null ? `<div>${m.waist} cm ${waistDelta}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    el.innerHTML = html;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- reset ----------
+  document.getElementById('resetData').addEventListener('click', async ()=>{
+    if (!confirm('Effacer toutes tes données (réglages, check-ins, mesures) ? Cette action est irréversible.')) return;
+    settings = { protocol:'16/8', eatStart:'12:00', eatEnd:'20:00' };
+    dailyLog = {};
+    measurements = [];
+    await saveSettings(); await saveDaily(); await saveMeasurements();
+    renderAll();
+    alert('Données réinitialisées.');
+  });
+
+  function renderAll(){
+    renderSettings();
+    renderCheckin();
+    tick();
+    renderWeek();
+    renderMeasurements();
+  }
+
+  loadAll();
+})();
+</script>
+</body>
+</html>
