@@ -81,6 +81,12 @@
     background:var(--surface-2);border:1px solid var(--border);color:var(--text);
     border-radius:8px;padding:6px 8px;font-family:'Inter',sans-serif;font-size:0.85rem;width:88px;
   }
+  .notif-btn{
+    margin-top:16px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    padding:9px 16px;border-radius:20px;font-size:0.82rem;font-family:'Inter',sans-serif;cursor:pointer;
+  }
+  .notif-btn.on{background:var(--eat);border-color:var(--eat);color:#0d211d;font-weight:600;}
+  .notif-note{font-size:0.72rem;color:var(--text-muted);margin-top:8px;max-width:280px;margin-left:auto;margin-right:auto;line-height:1.4;}
 
   /* --- Tabs --- */
   nav.tabs{
@@ -132,6 +138,14 @@
   table.week .cell.yes{background:var(--eat);color:#0d211d;font-weight:700;}
   table.week .cell.no{background:var(--danger);color:#2a0f0c;font-weight:700;}
   table.week .cell.today{border-color:var(--fast);}
+
+  /* --- Chart --- */
+  .chart-legend{display:flex;gap:16px;font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;}
+  .chart-legend span{display:flex;align-items:center;gap:5px;}
+  .chart-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  #chartWrap svg{width:100%;height:auto;display:block;}
+  #chartWrap .axis-label{font-size:7px;fill:var(--text-muted);font-family:'Inter',sans-serif;}
+  #chartWrap .empty-note{font-size:0.8rem;color:var(--text-muted);text-align:center;padding:16px 0;}
 
   /* --- Measurements --- */
   .m-form{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
@@ -207,6 +221,8 @@
         <span>→</span>
         <input type="time" id="eatEnd">
       </div>
+      <button class="notif-btn" id="notifBtn">🔔 Activer les rappels</button>
+      <div class="notif-note">Prévient à l'ouverture et à la fermeture de la fenêtre — appli ouverte en arrière-plan requise.</div>
     </div>
 
     <div class="card">
@@ -261,6 +277,15 @@
 
   <!-- ================= MESURES ================= -->
   <section class="section" id="tab-measures">
+    <div class="card" id="chartCard" style="display:none;">
+      <h2 style="font-size:1rem;margin-bottom:4px;">Évolution</h2>
+      <div class="chart-legend">
+        <span><i style="background:var(--fast)"></i>Poids</span>
+        <span><i style="background:var(--eat)"></i>Tour de taille</span>
+      </div>
+      <div id="chartWrap"></div>
+    </div>
+
     <div class="card">
       <h2 style="font-size:1rem;margin-bottom:12px;">Nouvelle mesure</h2>
       <div class="m-form">
@@ -363,7 +388,7 @@
 <script>
 (function(){
   const DAY_LABELS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-  let settings = { protocol:'16/8', eatStart:'12:00', eatEnd:'20:00' };
+  let settings = { protocol:'16/8', eatStart:'12:00', eatEnd:'20:00', notifyEnabled:false };
   let dailyLog = {};
   let measurements = [];
 
@@ -464,6 +489,8 @@
     return pad(h)+':'+pad(m)+':'+pad(sec);
   }
 
+  let lastPhase = null;
+
   function tick(){
     const now = new Date();
     const info = phaseInfo(now);
@@ -482,8 +509,56 @@
     document.getElementById('heroNote').textContent = info.phase === 'fasting'
       ? 'Eau, café ou thé non sucré uniquement.'
       : 'Priorité aux protéines, légumes et bonnes graisses.';
+
+    if (lastPhase !== null && info.phase !== lastPhase){
+      notifyPhaseChange(info.phase);
+    }
+    lastPhase = info.phase;
   }
   setInterval(tick, 1000);
+
+  // ---------- notifications ----------
+  function renderNotifBtn(){
+    const btn = document.getElementById('notifBtn');
+    const on = settings.notifyEnabled && 'Notification' in window && Notification.permission === 'granted';
+    btn.classList.toggle('on', !!on);
+    btn.textContent = on ? '🔔 Rappels activés' : '🔔 Activer les rappels';
+  }
+
+  document.getElementById('notifBtn').addEventListener('click', async ()=>{
+    if (!('Notification' in window)){
+      alert("Les notifications ne sont pas prises en charge par ce navigateur.");
+      return;
+    }
+    if (settings.notifyEnabled){
+      settings.notifyEnabled = false;
+      saveSettings();
+      renderNotifBtn();
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted'){
+      settings.notifyEnabled = true;
+      saveSettings();
+      renderNotifBtn();
+      new Notification('Fenêtre', { body: 'Rappels activés. Garde l\'appli ouverte en arrière-plan pour les recevoir.' });
+    } else {
+      settings.notifyEnabled = false;
+      saveSettings();
+      renderNotifBtn();
+      alert("Notifications refusées. Tu peux les autoriser dans les paramètres du navigateur.");
+    }
+  });
+
+  function notifyPhaseChange(phase){
+    if (!settings.notifyEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+    if (phase === 'fasting'){
+      new Notification('Fenêtre — jeûne commencé', { body: `Fenêtre fermée. Prochaine ouverture à ${settings.eatStart}.` });
+    } else {
+      new Notification('Fenêtre — fenêtre ouverte', { body: `Tu peux manger jusqu'à ${settings.eatEnd}.` });
+    }
+  }
+
 
   // ---------- daily check-in ----------
   function getEntry(key){
@@ -620,6 +695,7 @@
 
   function renderMeasurements(){
     const el = document.getElementById('mHistory');
+    renderChart();
     if (!measurements.length){
       el.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:10px 0;">Aucune mesure enregistrée pour le moment.</div>';
       return;
@@ -647,6 +723,52 @@
     el.innerHTML = html;
   }
 
+  function renderChart(){
+    const card = document.getElementById('chartCard');
+    const wrap = document.getElementById('chartWrap');
+    const chrono = [...measurements].sort((a,b)=> a.date < b.date ? -1 : 1);
+    const withData = chrono.filter(m => m.weight != null || m.waist != null);
+
+    if (withData.length < 2){
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = 'block';
+
+    const W = 300, H = 130, padL = 6, padR = 6, padT = 10, padB = 16;
+    const n = withData.length;
+    const xStep = n > 1 ? (W - padL - padR) / (n - 1) : 0;
+    const xAt = i => padL + i * xStep;
+
+    function buildLine(field, color){
+      const vals = withData.map(m => m[field]).filter(v => v != null);
+      if (vals.length < 2) return '';
+      const min = Math.min(...vals), max = Math.max(...vals);
+      const range = (max - min) || 1;
+      const yAt = v => padT + (H - padT - padB) * (1 - (v - min + range*0.1) / (range*1.2));
+      let points = [];
+      withData.forEach((m,i) => {
+        if (m[field] != null) points.push([xAt(i), yAt(m[field])]);
+      });
+      const path = points.map(p => p.join(',')).join(' ');
+      const dots = points.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="${color}"/>`).join('');
+      return `<polyline points="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}`;
+    }
+
+    const weightLine = buildLine('weight', 'var(--fast)');
+    const waistLine = buildLine('waist', 'var(--eat)');
+
+    const firstLabel = withData[0].date.slice(5).replace('-', '/');
+    const lastLabel = withData[n-1].date.slice(5).replace('-', '/');
+
+    wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      ${weightLine}
+      ${waistLine}
+      <text x="${padL}" y="${H-2}" class="axis-label">${firstLabel}</text>
+      <text x="${W-padR}" y="${H-2}" class="axis-label" text-anchor="end">${lastLabel}</text>
+    </svg>`;
+  }
+
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -654,7 +776,7 @@
   // ---------- reset ----------
   document.getElementById('resetData').addEventListener('click', async ()=>{
     if (!confirm('Effacer toutes tes données (réglages, check-ins, mesures) ? Cette action est irréversible.')) return;
-    settings = { protocol:'16/8', eatStart:'12:00', eatEnd:'20:00' };
+    settings = { protocol:'16/8', eatStart:'12:00', eatEnd:'20:00', notifyEnabled:false };
     dailyLog = {};
     measurements = [];
     await saveSettings(); await saveDaily(); await saveMeasurements();
@@ -664,6 +786,7 @@
 
   function renderAll(){
     renderSettings();
+    renderNotifBtn();
     renderCheckin();
     tick();
     renderWeek();
