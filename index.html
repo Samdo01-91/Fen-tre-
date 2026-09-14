@@ -5,30 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fenêtre — suivi de jeûne intermittent</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#14161b">
+<meta name="theme-color" content="#6ec3ea">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#14161b;
-    --surface:#1d2027;
-    --surface-2:#262a33;
-    --border:#343947;
-    --text:#edeae2;
-    --text-muted:#8c9099;
-    --fast:#e4a94a;
-    --fast-dim:#4a3e26;
-    --eat:#5fa793;
-    --eat-dim:#243733;
-    --danger:#d9695f;
-    --ok:#5fa793;
+    --bg:#6ec3ea;
+    --surface:#5aafd9;
+    --surface-2:#3f96c4;
+    --border:#2c7fac;
+    --text:#071b24;
+    --text-muted:#1f5570;
+    --fast:#d4af37;
+    --fast-dim:#a8841f;
+    --eat:#1f7a68;
+    --eat-dim:#175f51;
+    --danger:#b8382e;
+    --ok:#1f7a68;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:var(--bg);
+    background:
+      repeating-linear-gradient(115deg, rgba(210,240,252,0.07) 0px, rgba(210,240,252,0.07) 2px, rgba(10,50,70,0.05) 2px, rgba(10,50,70,0.05) 4px),
+      linear-gradient(135deg, #cdeefb 0%, #7ecdee 18%, #3f96c4 38%, #1f6f9a 52%, #4a9fc9 68%, #8fd8f5 86%, #5aafd9 100%);
+    background-attachment:fixed;
     color:var(--text);
     font-family:'Inter',sans-serif;
     -webkit-font-smoothing:antialiased;
@@ -38,15 +41,19 @@
   .wrap{max-width:520px;margin:0 auto;padding:20px 18px 8px;}
 
   header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;}
-  header.top h1{font-size:1.5rem;letter-spacing:0.01em;}
+  header.top h1{font-size:1.5rem;letter-spacing:0.01em;text-shadow:0 1px 0 rgba(220,245,255,0.4);}
   header.top .tagline{color:var(--text-muted);font-size:0.8rem;margin-top:2px;}
 
   .card{
-    background:var(--surface);
+    background:linear-gradient(160deg, #7fceec 0%, #4a9fc9 45%, #2c7fac 100%);
     border:1px solid var(--border);
     border-radius:14px;
     padding:20px;
     margin-bottom:16px;
+    box-shadow:
+      inset 0 1px 0 rgba(215,242,255,0.45),
+      inset 0 -1px 0 rgba(8,35,50,0.35),
+      0 3px 10px rgba(8,40,60,0.22);
   }
 
   /* --- Hero timer --- */
@@ -56,12 +63,14 @@
     margin:0 auto 18px;
     display:flex;align-items:center;justify-content:center;
     transition:background 0.6s ease;
+    box-shadow:inset 0 1px 0 rgba(215,242,255,0.3), inset 0 -1px 0 rgba(8,35,50,0.3);
   }
   .ring-inner{
     width:172px;height:172px;border-radius:50%;
-    background:var(--bg);
+    background:linear-gradient(160deg, #5aafd9, #2c7fac);
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:4px;
+    box-shadow:inset 0 2px 4px rgba(8,35,50,0.35), inset 0 -1px 0 rgba(215,242,255,0.25);
   }
   .phase-label{font-size:0.72rem;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;}
   .phase-time{font-family:'Fraunces',serif;font-variant-numeric:tabular-nums;font-size:2.15rem;font-weight:500;line-height:1;margin-top:4px;}
@@ -91,7 +100,9 @@
   /* --- Tabs --- */
   nav.tabs{
     position:fixed;bottom:0;left:0;right:0;
-    background:var(--surface);border-top:1px solid var(--border);
+    background:linear-gradient(180deg, #7fceec, #3f96c4);
+    border-top:1px solid var(--border);
+    box-shadow:inset 0 1px 0 rgba(215,242,255,0.4);
     display:flex;justify-content:space-around;padding:10px 6px calc(10px + env(safe-area-inset-bottom));
     max-width:520px;margin:0 auto;
   }
